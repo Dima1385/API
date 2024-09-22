@@ -50,5 +50,33 @@ namespace Dashboard.API.Controllers
                 return BadRequest(result.Errors.First().Description);
             }
         }
+
+        [HttpPost("SignIn")]
+        public async Task<IActionResult> SignInAsync([FromBody] SignInVM model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest("Неправильні вхідні дані");
+            }
+
+            var user = await _userManager.FindByEmailAsync(model.Email)
+                        ?? await _userManager.FindByNameAsync(model.Email);
+
+            if (user == null)
+            {
+                return BadRequest("Користувач з такими даними не знайдений");
+            }
+
+            var result = await _userManager.CheckPasswordAsync(user, model.Password);
+
+            if (!result)
+            {
+                return BadRequest("Невірний пароль");
+            }
+
+            // Якщо необхідно виконати додаткову логіку, наприклад, додати токен
+            return Ok($"Користувач {model.Email} успішно увійшов");
+        }
+
     }
 }
