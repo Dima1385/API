@@ -1,23 +1,38 @@
-﻿using Dashboard.BLL.Validators;
-using Dashboard.DAL.Models.Identity;
+﻿using Dashboard.BLL.Services.AccountService;
+using Dashboard.BLL.Validators;
 using Dashboard.DAL.ViewModels;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Dashboard.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AccountController : ControllerBase
+    public class AccountController : BaseController
     {
-        private readonly UserManager<User> _userManager;
+        private readonly IAccountService _accountService;
 
-        public AccountController(UserManager<User> userManager) 
+        public AccountController(IAccountService accountService)
         {
-            _userManager = userManager;
+            _accountService = accountService;
         }
 
-        [HttpPost("SignUp")]
+        [HttpPost("signin")]
+        public async Task<IActionResult> SignInAsync([FromBody] SignInVM model)
+        {
+            var validator = new SignInValidator();
+            var validation = await validator.ValidateAsync(model);
+
+            if (!validation.IsValid)
+            {
+                return BadRequest(validation.Errors);
+            }
+
+            var response = await _accountService.SignInAsync(model);
+
+            return GetResult(response);
+        }
+
+        [HttpPost("signup")]
         public async Task<IActionResult> SignUpAsync([FromBody] SignUpVM model)
         {
             SignUpValidator validator = new SignUpValidator();
@@ -28,55 +43,20 @@ namespace Dashboard.API.Controllers
                 return BadRequest(validation.Errors);
             }
 
-            var user = new User
-            {
-                Id = Guid.NewGuid().ToString(),
-                Email = model.Email,
-                FirstName = model.FirstName,
-                LastName = model.LastName,
-                UserName = model.UserName,
-                NormalizedEmail = model.Email.ToUpper(),
-                NormalizedUserName = model.UserName.ToUpper()
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password);
-
-            if(result.Succeeded)
-            {
-                return Ok($"Користувач {model.Email} успішно зареєстрований");
-            }
-            else
-            {
-                return BadRequest(result.Errors.First().Description);
-            }
+            var response = await _accountService.SignUpAsync(model);
+            return GetResult(response);
         }
 
-        [HttpPost("SignIn")]
-        public async Task<IActionResult> SignInAsync([FromBody] SignInVM model)
+        [HttpGet("emailconfrim")]
+        public async Task<IActionResult> EmailConfirmAsync(string u, string t)
         {
-            if (!ModelState.IsValid)
+            if(string.IsNullOrEmpty(u) || string.IsNullOrEmpty(t))
             {
-                return BadRequest("Неправильні вхідні дані");
+                return NotFound();
             }
 
-            var user = await _userManager.FindByEmailAsync(model.Email)
-                        ?? await _userManager.FindByNameAsync(model.Email);
-
-            if (user == null)
-            {
-                return BadRequest("Користувач з такими даними не знайдений");
-            }
-
-            var result = await _userManager.CheckPasswordAsync(user, model.Password);
-
-            if (!result)
-            {
-                return BadRequest("Невірний пароль");
-            }
-
-            // Якщо необхідно виконати додаткову логіку, наприклад, додати токен
-            return Ok($"Користувач {model.Email} успішно увійшов");
+            var response = await _accountService.EmailConfirmAsync(u, t);
+            return GetResult(response);
         }
-
     }
 }
