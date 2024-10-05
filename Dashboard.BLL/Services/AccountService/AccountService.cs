@@ -6,9 +6,10 @@ using Dashboard.DAL.ViewModels;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 using Microsoft.Extensions.Configuration;
 using System.Text;
+using Dashboard.BLL.Services.TokenService;
+using System.Linq;
 
 namespace Dashboard.BLL.Services.AccountService
 {
@@ -19,14 +20,22 @@ namespace Dashboard.BLL.Services.AccountService
         private readonly IMailService _mailService;
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IJwtTokenService _jwtTokenService;
 
-        public AccountService(UserManager<User> userManager, IUserRepository userRepository, IMailService mailService, IConfiguration configuration, IWebHostEnvironment webHostEnvironment)
+        public AccountService(
+            UserManager<User> userManager,
+            IUserRepository userRepository,
+            IMailService mailService,
+            IConfiguration configuration,
+            IWebHostEnvironment webHostEnvironment,
+            IJwtTokenService jwtTokenService)
         {
             _userManager = userManager;
             _userRepository = userRepository;
             _mailService = mailService;
             _configuration = configuration;
             _webHostEnvironment = webHostEnvironment;
+            _jwtTokenService = jwtTokenService;
         }
 
         public async Task<ServiceResponse> EmailConfirmAsync(string id, string token)
@@ -43,7 +52,7 @@ namespace Dashboard.BLL.Services.AccountService
 
             var result = await _userRepository.ConfirmEmailAsync(user, validToken);
 
-            if(!result.Succeeded)
+            if (!result.Succeeded)
             {
                 return ServiceResponse.BadRequestResponse(result.Errors.First().Description);
             }
@@ -79,19 +88,19 @@ namespace Dashboard.BLL.Services.AccountService
                 Role = user.UserRoles.Count == 0 ? Settings.UserRole : user.UserRoles.First().Role.Name
             };
 
-            return ServiceResponse.OkResponse("Успіший вхід", userVM);
+            return ServiceResponse.OkResponse("Успішний вхід", userVM);
         }
 
         public async Task<ServiceResponse> SignUpAsync(SignUpVM model)
         {
-            if(!await _userRepository.IsUniqueUserNameAsync(model.UserName))
+            if (!await _userRepository.IsUniqueUserNameAsync(model.UserName))
             {
-                return ServiceResponse.BadRequestResponse($"{model.UserName} вже викорстовується");
+                return ServiceResponse.BadRequestResponse($"{model.UserName} вже використовується");
             }
 
             if (!await _userRepository.IsUniqueEmailAsync(model.Email))
             {
-                return ServiceResponse.BadRequestResponse($"{model.Email} вже викорстовується");
+                return ServiceResponse.BadRequestResponse($"{model.Email} вже використовується");
             }
 
             var user = new User
@@ -114,9 +123,15 @@ namespace Dashboard.BLL.Services.AccountService
 
             await _userManager.AddToRoleAsync(user, Settings.UserRole);
 
+            var roles = await _userManager.GetRolesAsync(user);
+
+            // Генерація JWT токену
+            string token = _jwtTokenService.GenerateToken(user, roles);
+
+            // Відправка листа з підтвердженням пошти
             await SendConfirmEmailAsync(user);
 
-            return ServiceResponse.OkResponse($"Користувач {model.Email} успішно зареєстрований", "jwt token");
+            return ServiceResponse.OkResponse($"Користувач {model.Email} успішно зареєстрований", token);
         }
 
         private async Task SendConfirmEmailAsync(User user)
@@ -127,7 +142,7 @@ namespace Dashboard.BLL.Services.AccountService
             var address = _configuration["Host:Address"];
 
             const string URL_PARAM = "emailConfirmUrl";
-            string confirmationUrl = $"{address}/api/account/emailconfrim?u={user.Id}&t={validToken}";
+            string confirmationUrl = $"{address}/api/account/emailconfirm?u={user.Id}&t={validToken}";
 
             string rootPath = _webHostEnvironment.ContentRootPath;
             string templatePath = Path.Combine(rootPath, Settings.HtmlPagesPath, "emailconfirmation.html");

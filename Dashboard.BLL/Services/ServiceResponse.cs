@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Dashboard.DAL.ViewModels;
+using System.Net;
 
 namespace Dashboard.BLL.Services
 {
@@ -33,6 +34,16 @@ namespace Dashboard.BLL.Services
         public static ServiceResponse InternalServerErrorResponse(string message, object? payload = null)
         {
             return GetResponse(message, false, payload, HttpStatusCode.InternalServerError);
+        }
+
+        internal static ServiceResponse OkResponse(IEnumerable<RoleVM> rolesVM)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal static ServiceResponse OkResponse(RoleVM roleVM)
+        {
+            throw new NotImplementedException();
         }
     }
 }

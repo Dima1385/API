@@ -14,5 +14,6 @@ namespace Dashboard.DAL.Repositories.UserRepository
         Task<bool> IsUniqueUserNameAsync(string userName);
         Task<string> GenerateEmailConfirmationTokenAsync(User user);
         Task<IdentityResult> ConfirmEmailAsync(User user, string token);
+        Task<IEnumerable<object>> GetAllAsync();
     }
 }
