@@ -12,5 +12,6 @@ namespace Dashboard.DAL.Models.Identity
         public virtual ICollection<UserLogin> Logins { get; set; }
         public virtual ICollection<UserToken> Tokens { get; set; }
         public virtual ICollection<UserRole> UserRoles { get; set; }
+        public string? ImagePath { get; set; }
     }
 }
