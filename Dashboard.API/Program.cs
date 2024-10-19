@@ -64,27 +64,6 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.MapControllers();
 
-// Метод для створення ролей
-async Task SeedRoles(RoleManager<IdentityRole> roleManager)
-{
-    if (!await roleManager.RoleExistsAsync("seeder"))
-    {
-        await roleManager.CreateAsync(new IdentityRole("seeder"));
-    }
-
-    if (!await roleManager.RoleExistsAsync("settings"))
-    {
-        await roleManager.CreateAsync(new IdentityRole("settings"));
-    }
-}
-
-// Виклик SeedRoles для додавання ролей при старті додатка
-using (var scope = app.Services.CreateScope())
-{
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    await SeedRoles(roleManager); // викликаємо SeedRoles
-}
-
 app.SeedData();
 
 app.Run();
