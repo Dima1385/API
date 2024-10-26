@@ -1,9 +1,11 @@
+using Dashboard.BLL.Services;
 using Dashboard.BLL.Services.AccountService;
 using Dashboard.BLL.Services.MailService;
 using Dashboard.DAL;
 using Dashboard.DAL.Data;
 using Dashboard.DAL.Data.Initializer;
 using Dashboard.DAL.Models.Identity;
+using Dashboard.DAL.Repositories;
 using Dashboard.DAL.Repositories.UserRepository;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -67,3 +69,7 @@ app.MapControllers();
 app.SeedData();
 
 app.Run();
+
+
+builder.Services.AddScoped<INewsRepository, NewsRepository>();
+builder.Services.AddScoped<INewsService, NewsService>();
